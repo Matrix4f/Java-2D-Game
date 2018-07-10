@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Level Builder:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Level_Builder_jar</output-path>
+    <root id="archive" name="Level Builder.jar">
+      <element id="module-output" name="Level Builder" />
+      <element id="extracted-dir" path="$USER_HOME$/Documents/Java/json/json-simple-1.1.1.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

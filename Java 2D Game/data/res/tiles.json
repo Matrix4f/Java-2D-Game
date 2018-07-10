@@ -1,0 +1,10 @@
+{
+	"data":[
+		{"name":"grass","id":0,"coll":"false"},
+		{"name":"dirt","id":1,"coll":"false"},
+		{"name":"sand","id":2,"coll":"false"},
+		{"name":"water","id":3,"coll":"false"},
+		{"name":"lava","id":4,"coll":"false"},
+		{"name":"rock","id":5,"coll":"false"}
+	]
+}

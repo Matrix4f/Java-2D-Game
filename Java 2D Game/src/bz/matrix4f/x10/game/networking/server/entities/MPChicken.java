@@ -1,0 +1,108 @@
+package bz.matrix4f.x10.game.networking.server.entities;
+
+import bz.matrix4f.x10.game.entity.UUID;
+import bz.matrix4f.x10.game.map.Tile;
+import bz.matrix4f.x10.game.networking.packet.Packet0jAddEntity;
+import bz.matrix4f.x10.game.networking.packet.Packet0mParticle;
+import bz.matrix4f.x10.game.networking.server.ClientConn;
+import bz.matrix4f.x10.game.networking.server.Server;
+
+public class MPChicken extends MPEntity {
+
+    private int ticksToRecalculateNearestPlayer = 0;
+    private int ticksToMakeEgg = 150;
+    private MPPlayer target;
+
+    public MPChicken(float x, float y, String uuid, Server server) {
+        super(x, y, 48, 48, uuid, server);
+    }
+
+    @Override
+    public boolean tick() {
+        if(ticksToRecalculateNearestPlayer <= 0) {
+            int index = 0;
+            float minDist = 0;
+            for(ClientConn conn : server.clients()) {
+                MPPlayer player = conn.getPlayer();
+                if(player == null) break;
+                float dx = mx()- player.mx();
+                float dy = mx() - player.my();
+                float dist = (float) Math.sqrt(dx * dx + dy * dy);
+                if(index == 0 || dist < minDist) {
+                    minDist = dist;
+                    target = player;
+                }
+                index++;
+            }
+
+            if(target == null)
+                return false;
+            float[] velocities = calculateVelocities();
+            if(velocities[2] >= Tile.WIDTH * 3) {
+                vx = velocities[0];
+                vy = velocities[1];
+            } else {
+                vx = 0;
+                vy = 0;
+            }
+            ticksToRecalculateNearestPlayer = 150;
+        } else ticksToRecalculateNearestPlayer--;
+
+        if(ticksToMakeEgg <= 0) {
+            if(target != null) {
+                MPEgg egg = new MPEgg(mx(), my(), UUID.generate(), server);
+                float[] velocities = calculateVelocities();
+                float scale = 6;
+                float evx = velocities[0] * scale;
+                float evy = velocities[1] * scale;
+                float pvx = target.getVx();
+                float pvy = target.getVy();
+                float px = target.mx();
+                float py = target.my();
+                int ticksTaken = 1;
+                egg.setVx(evx);
+                egg.setVy(evy);
+                while(!egg.bounds().intersects(target.bounds())) {
+                    egg.move();
+                    ticksTaken++;
+                    if(ticksTaken > 120)
+                        break;
+                }
+                px += pvx * ticksTaken;
+                py += pvy * ticksTaken;
+                velocities = calculateVelocities(px + target.getWidth() / 2, py + target.getWidth() / 2);
+                egg.setX(mx());
+                egg.setY(my());
+                egg.setVx(velocities[0] * scale);
+                egg.setVy(velocities[1] * scale);
+                server.getEntities().add(egg.getUUID(), egg);
+                Packet0jAddEntity packet = new Packet0jAddEntity(ClientConn.getJSON(egg).toJSONString());
+                server.sendPacketToAllClients(packet);
+            }
+            ticksToMakeEgg = 15;
+        } else ticksToMakeEgg--;
+        move();
+        sendMovePacket();
+        if(health <= 0) {
+            server.sendPacketToAllClients(new Packet0mParticle(25, (int) x, (int) y, .5, 125));
+            return true;
+        }
+        return false;
+    }
+
+    private float[] calculateVelocities(float tx, float ty) {
+        float adjacent = (tx - mx());
+        float opposite = (ty - my());
+        float hypotenuse = (float) Math.sqrt(opposite * opposite + adjacent * adjacent);
+        float sine = opposite / hypotenuse;
+        float cosine = adjacent / hypotenuse;
+        float scale = 2.5f;
+        float vx = cosine * scale;
+        float vy = sine * scale;
+        return new float[] {vx, vy, hypotenuse};
+    }
+
+    private float[] calculateVelocities() {
+        return calculateVelocities(target.mx(), target.my());
+    }
+}
